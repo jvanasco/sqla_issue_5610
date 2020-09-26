@@ -1,6 +1,13 @@
 from pprint import pprint
 
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    ForeignKey,
+    CheckConstraint,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
@@ -25,10 +32,7 @@ class Equipment(Base):
     log_entries = relationship("ActionEquipmentLog")
 
     def __repr__(self):
-        return (
-            f"<Equipment(id={self.id}"
-            f", equipment_name='{self.equipment_name}')>"
-        )
+        return f"<Equipment(id={self.id}" f", equipment_name='{self.equipment_name}')>"
 
 
 class ActionLog(Base):
@@ -42,6 +46,22 @@ class ActionLog(Base):
     __mapper_args__ = {
         "polymorphic_on": entity_type,
     }
+    __table_args__ = (
+        CheckConstraint(
+            "( "
+            " CASE WHEN user_id IS NOT NULL THEN 1 ELSE 0 END "
+            " + "
+            " CASE WHEN equipment_id IS NOT NULL THEN 1 ELSE 0 END "
+            ") = 1",
+            name="check_only_one_entity",
+        ),
+        CheckConstraint(
+            " (user_id IS NOT NULL AND entity_type = 'user')"
+            " OR "
+            " (equipment_id IS NOT NULL AND entity_type = 'equipment')",
+            name="check_entity_correlation",
+        ),
+    )
 
     def __repr__(self):
         return (
